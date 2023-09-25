@@ -1,0 +1,100 @@
+package com.example.electricityBillingSystem.admin.serviceImpl;
+
+
+
+import java.util.List;
+import java.util.Optional;
+
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.example.electricityBillingSystem.admin.dto.AdminDto;
+import com.example.electricityBillingSystem.admin.entity.Admin;
+import com.example.electricityBillingSystem.admin.exception.AdminAlreadyExistsException;
+import com.example.electricityBillingSystem.admin.exception.AdminDoesNotExistException;
+import com.example.electricityBillingSystem.admin.exception.InvalidCredentialsException;
+import com.example.electricityBillingSystem.admin.repository.AdminRepo;
+import com.example.electricityBillingSystem.admin.service.AdminService;
+@Service
+public class AdminServiceImpl implements AdminService{
+	@Autowired
+	private AdminRepo adminrepo;
+	@Autowired
+	private ModelMapper mapper;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	@Override
+	public AdminDto insertAdmin(AdminDto adddto) throws AdminAlreadyExistsException {
+		Optional<Admin> opt = adminrepo.findById(adddto.getAdminId());
+
+		if (opt.isPresent()) {
+
+			throw new AdminAlreadyExistsException();
+
+		}
+
+		Admin a = mapper.map(adddto, Admin.class);
+
+		a.setUserPassword(passwordEncoder.encode(adddto.getUserPassword()));
+
+		return mapper.map(adminrepo.save(a), AdminDto.class);
+		
+		
+	}
+	@Override
+	public AdminDto updateAdmin(AdminDto adddto) throws AdminDoesNotExistException {
+		Optional<Admin> opt = adminrepo.findById(adddto.getAdminId());
+	    if (opt.isEmpty()) {
+	        throw new AdminDoesNotExistException();
+	    }
+	    Admin ad = opt.get();
+	    
+	    if (adddto.getUserPassword() != null) {
+	        // Check if the provided password is valid
+	        if (passwordEncoder.matches(adddto.getUserPassword(), ad.getUserPassword())) {
+	            // If the provided password is valid, update the password
+	            ad.setUserPassword(passwordEncoder.encode(adddto.getUserPassword()));
+	        } else {
+	            throw new RuntimeException("Enter a valid Password");
+	        }
+	    }
+	    
+	    return mapper.map(adminrepo.save(ad), AdminDto.class);
+	}
+	@Override
+	public String loginAdmin(AdminDto ad) throws AdminDoesNotExistException, InvalidCredentialsException {
+		AdminDto opt=adminrepo.findByUserName(ad.getUserName());
+		if(opt!=null) {
+			if(opt.getUserName().equals(ad.getUserName()) 
+					&& (passwordEncoder.matches( ad.getUserPassword(), opt.getUserPassword()))) {
+				return "Valid";
+			}
+			else {
+				throw new InvalidCredentialsException();
+			}
+		}
+		else {
+			throw new AdminDoesNotExistException();
+		}
+	
+	}
+	@Override
+	public AdminDto deleteAdminById(AdminDto adddto) {
+		Optional<Admin> opt = adminrepo.findById(adddto.getAdminId());
+		return mapper.map(adminrepo.deleteById(id), AdminDto.class);;
+	}
+	
+	
+	
+	
+	
+
+	
+	
+	
+	
+
+}
